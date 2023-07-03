@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+  </head>
+  <body>
+    <video id="my-video" class="video-js vjs-default-skin" controls></video>
+    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-eme@3.11.1/dist/videojs-contrib-eme.min.js"></script>
+    <script>
+      (async () => {
+        function uint8ArrayToString(array) {
+          return String.fromCharCode.apply(null, array);
+        }
+
+        function removeUTFControlCharacters(string) {
+          return string.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+        }
+
+        async function checkDRM() {
+          if (typeof navigator.requestMediaKeySystemAccess === "function") {
+            const config = [
+              {
+                initDataTypes: ["cenc"],
+                audioCapabilities: [
+                  { contentType: 'audio/mp4;codecs="mp4a.40.2"' },
+                ],
+                videoCapabilities: [
+                  { contentType: 'video/mp4;codecs="avc1.42E01E"' },
+                ],
+              },
+            ];
+
+            const drmSystems = [
+              { keySystem: "com.widevine.alpha", name: "Widevine" },
+              { keySystem: "com.microsoft.playready", name: "PlayReady" },
+              { keySystem: "com.apple.fps.1_0", name: "FairPlay" },
+            ];
+
+            const supportedDRMs = [];
+
+            return Promise.all(
+              drmSystems.map((keySystem) =>
+                navigator
+                  .requestMediaKeySystemAccess(keySystem.keySystem, config)
+                  .then(() => supportedDRMs.push(keySystem.name))
+                  .catch((error) => {
+                    // console.error(error)
+                  })
+              )
+            ).then(() => supportedDRMs);
+          } else {
+            return Promise.reject("EME API not supported in this browser.");
+          }
+        }
+
+        function prepareFairPlayKeySystem() {
+          // FairPlay license acquisition as described in: 
+          // https://developers.drm.cloud/licence-acquisition/licence-acquisition#fairplay---additional-information
+          return {
+            "com.apple.fps.1_0": {
+              certificateUri: '%FAIR_PLAY_CERTIFICATE_URL%',
+              getContentId: function (emeOptions, initData) {
+                const url = removeUTFControlCharacters(
+                  uint8ArrayToString(initData)
+                );
+
+                return url.replace("~", "").replace("skd://", "https://");
+              },
+              getLicense: function (
+                emeOptions,
+                contentId,
+                keyMessage,
+                callback
+              ) {
+                videojs.xhr(
+                  {
+                    uri: `${contentId}&userToken=%USER_TOKEN%`,
+                    method: "POST",
+                    responseType: "arraybuffer",
+                    body: keyMessage,
+                    headers: { "Content-type": "application/octet-stream" },
+                  },
+                  function (err, response, responseBody) {
+                    if (err) {
+                      callback(err);
+                      return;
+                    }
+
+                    callback(null, responseBody);
+                  }
+                );
+              },
+            },
+          };
+        }
+
+        const supportedDrmSystems = await checkDRM();
+        const drmSystem = supportedDrmSystems[0];
+
+        let sources = [];
+
+        // Prepare Video.js sources object based on supported in your browser drm system:
+        if (drmSystem === "FairPlay") {
+          sources = [
+            {
+              src: '%HLS_URL%',
+              type: "application/x-mpegURL",
+              // videojs-contrib-eme drm configuration object, read more: https://github.com/videojs/videojs-contrib-eme
+              keySystems: prepareFairPlayKeySystem(),
+            },
+          ];
+        } else {
+          sources = [
+            {
+              src: '%MPEG_DASH_URL%',
+              type: "application/dash+xml",
+              keySystems: {
+                "com.microsoft.playready": `%PLAYREADY_LICENSE_ENDPOINT%&userToken=%USER_TOKEN%`,
+                "com.widevine.alpha": `%WIDEVINE_LICENSE_ENDPOINT%&userToken=%USER_TOKEN%`,
+              },
+            },
+          ];
+        }
+
+        var videoElement = document.getElementById("my-video");
+        var player = videojs(videoElement);
+
+        player.ready(function () {
+          player.eme();
+          player.src(sources);
+        });
+      })();
+    </script>
+  </body>
+</html>
