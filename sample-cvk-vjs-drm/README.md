@@ -9,7 +9,7 @@ Sample require node in version 18 or higher
 
 Installation steps:
 1. Type npm install in terminal
-2. Run `npm run start command`
+2. Run `npm run start` command
 
 # Required data
 The code sample requires certain data to function properly. You need to provide the following information:
