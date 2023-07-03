@@ -4,6 +4,13 @@ The provided application demonstrates how to utilize the Cloud Video Kit service
 
 The code sample below detects the DRM systems supported by the user's browser and selects the appropriate one for playback. The application includes an express.js web server responsible for generating DRM tokens and serving the webpage.
 
+# Installation
+Sample require node in version 18 or higher
+
+Installation steps:
+1. Type npm install in terminal
+2. Run `npm run start command`
+
 # Required data
 The code sample requires certain data to function properly. You need to provide the following information:
 - FairPlay certificate URL
