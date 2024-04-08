@@ -14,13 +14,14 @@ Installation steps:
 # Required data
 The code sample requires certain data to function properly. You need to provide the following information:
 - FairPlay certificate URL
+- FairPlay server license URL
 - PlayReady server license URL
 - Widevine server license URL
 - DRM signing key
 
 **Please fill the .env file with these details.** The URLs can be obtained from the DRM console settings page.
 
-![DRM settings](https://iili.io/HiNWReV.png)
+![DRM settings](https://iili.io/JkGl5FI.png)
 
 # How it works
 
