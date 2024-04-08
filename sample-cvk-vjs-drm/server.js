@@ -4,7 +4,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
 
-dotenv.config();
+dotenv.config({ path: ['.env.local', '.env'] });
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -18,17 +18,10 @@ if (!process.env.SIGNING_KEY) {
 function getDrmToken() {
   // More info about drm token parameters here: https://developers.drm.cloud/licence-acquisition/how-to-issue-license#jwt-token-generation-example
   const expirationDateUnixTimestamp = Math.floor(Date.now() / 1000) + 60 * 10; // short-lived token, eg. 10 minutes
-  const expirationDateISOString = new Date(
-    expirationDateUnixTimestamp * 1000
-  ).toISOString();
   return jwt.sign(
     {
       exp: expirationDateUnixTimestamp,
-      drmTokenInfo: {
-        exp: expirationDateISOString,
-        kid: ["*"],
-        p: {},
-      },
+      kid: ["*"],
     },
     Buffer.from(process.env.SIGNING_KEY, "base64"),
     { algorithm: "HS256" }
@@ -48,6 +41,7 @@ app.get("/", async function (req, res) {
     "WIDEVINE_LICENSE_ENDPOINT",
     "PLAYREADY_LICENSE_ENDPOINT",
     "FAIR_PLAY_CERTIFICATE_URL",
+    "FAIR_PLAY_LICENSE_ENDPOINT"
   ].forEach((variable) => {
     index = index.replaceAll(`%${variable}%`, process.env[variable]);
   });

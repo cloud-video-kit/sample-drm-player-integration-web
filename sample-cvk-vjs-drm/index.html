@@ -55,17 +55,23 @@
         }
 
         function prepareFairPlayKeySystem() {
-          // FairPlay license acquisition as described in: 
+          // FairPlay license acquisition as described in:
           // https://developers.drm.cloud/licence-acquisition/licence-acquisition#fairplay---additional-information
           return {
             "com.apple.fps.1_0": {
-              certificateUri: '%FAIR_PLAY_CERTIFICATE_URL%',
+              certificateUri: "%FAIR_PLAY_CERTIFICATE_URL%",
               getContentId: function (emeOptions, initData) {
-                const url = removeUTFControlCharacters(
-                  uint8ArrayToString(initData)
-                );
+                const fairPlayLicenseEndpointURL = new URL("%FAIR_PLAY_LICENSE_ENDPOINT%");
 
-                return url.replace("~", "").replace("skd://", "https://");
+                const resultURL = new URL(fairPlayLicenseEndpointURL.origin + fairPlayLicenseEndpointURL.pathname);
+                const certificateSkdURL = new URL(removeUTFControlCharacters(uint8ArrayToString(initData)));
+
+                certificateSkdURL.searchParams.forEach((value, key) => {
+                  const lowerKey = key.toLowerCase();
+                  resultURL.searchParams.append(lowerKey, value);
+                });
+
+                return resultURL.toString();
               },
               getLicense: function (
                 emeOptions,
@@ -104,7 +110,7 @@
         if (drmSystem === "FairPlay") {
           sources = [
             {
-              src: '%HLS_URL%',
+              src: "%HLS_URL%",
               type: "application/x-mpegURL",
               // videojs-contrib-eme drm configuration object, read more: https://github.com/videojs/videojs-contrib-eme
               keySystems: prepareFairPlayKeySystem(),
@@ -113,7 +119,7 @@
         } else {
           sources = [
             {
-              src: '%MPEG_DASH_URL%',
+              src: "%MPEG_DASH_URL%",
               type: "application/dash+xml",
               keySystems: {
                 "com.microsoft.playready": `%PLAYREADY_LICENSE_ENDPOINT%&userToken=%USER_TOKEN%`,
