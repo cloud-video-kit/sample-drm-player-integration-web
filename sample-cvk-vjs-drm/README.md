@@ -33,15 +33,11 @@ const jwt = require("jsonwebtoken");
 
 function getDrmToken() {
   const expirationDateUnixTimestamp = Math.floor(Date.now() / 1000) + 60 * 10; // short-lived token, eg. 10 minutes
-  const expirationDateISOString = new Date(expirationDateUnixTimestamp * 1000).toISOString();
+
   return jwt.sign(
     {
       exp: expirationDateUnixTimestamp,
-      drmTokenInfo: {
-        exp: expirationDateISOString,
-        kid: ["*"],
-        p: {},
-      },
+      kid: ["*"]
     },
     Buffer.from(process.env.SIGNING_KEY, "base64"),
     { algorithm: "HS256" }
