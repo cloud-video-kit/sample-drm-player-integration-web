@@ -1,22 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    <link href="https://vjs.zencdn.net/8.16.1/video-js.min.css" rel="stylesheet" />
   </head>
   <body>
     <video id="my-video" class="video-js vjs-default-skin" controls></video>
-    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-eme@3.11.1/dist/videojs-contrib-eme.min.js"></script>
+    <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-eme@5.5.1/dist/videojs-contrib-eme.min.js"></script>
     <script>
       (async () => {
-        function uint8ArrayToString(array) {
-          return String.fromCharCode.apply(null, array);
-        }
-
-        function removeUTFControlCharacters(string) {
-          return string.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
-        }
-
         async function checkDRM() {
           if (typeof navigator.requestMediaKeySystemAccess === "function") {
             const config = [
@@ -56,22 +48,17 @@
 
         function prepareFairPlayKeySystem() {
           // FairPlay license acquisition as described in:
-          // https://developers.drm.cloud/licence-acquisition/licence-acquisition#fairplay---additional-information
+          // https://developers.drm.cloud/licence-acquisition/examples/fairplay-example#fairplay-addditional-information
           return {
             "com.apple.fps.1_0": {
               certificateUri: "%FAIR_PLAY_CERTIFICATE_URL%",
               getContentId: function (emeOptions, initData) {
-                const fairPlayLicenseEndpointURL = new URL("%FAIR_PLAY_LICENSE_ENDPOINT%");
+                const hasQueryParams = /[?&]/.test(initData);
 
-                const resultURL = new URL(fairPlayLicenseEndpointURL.origin + fairPlayLicenseEndpointURL.pathname);
-                const certificateSkdURL = new URL(removeUTFControlCharacters(uint8ArrayToString(initData)));
-
-                certificateSkdURL.searchParams.forEach((value, key) => {
-                  const lowerKey = key.toLowerCase();
-                  resultURL.searchParams.append(lowerKey, value);
-                });
-
-                return resultURL.toString();
+                if (hasQueryParams){
+                  const params = initData.split("?")[1];
+                  return new URLSearchParams(params).toString();
+                }
               },
               getLicense: function (
                 emeOptions,
@@ -79,9 +66,21 @@
                 keyMessage,
                 callback
               ) {
+                const fairPlayLicenseEndpointURL = new URL("%FAIR_PLAY_LICENSE_ENDPOINT%");
+
+                if (contentId) {
+                  new URLSearchParams(contentId).forEach((value, key) => {
+                    if (!fairPlayLicenseEndpointURL.searchParams.has(key)) {
+                      fairPlayLicenseEndpointURL.searchParams.append(key, value);
+                    }
+                  });
+                }
+
+                fairPlayLicenseEndpointURL.searchParams.append('userToken', '%USER_TOKEN%');
+
                 videojs.xhr(
                   {
-                    uri: `${contentId}&userToken=%USER_TOKEN%`,
+                    uri: fairPlayLicenseEndpointURL.toString(),
                     method: "POST",
                     responseType: "arraybuffer",
                     body: keyMessage,
@@ -134,6 +133,7 @@
 
         player.ready(function () {
           player.eme();
+          player.eme.initLegacyFairplay();
           player.src(sources);
         });
       })();
